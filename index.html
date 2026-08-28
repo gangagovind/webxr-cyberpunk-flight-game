@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <title>Cyberpunk 2099 — Skyline Overdrive WebXR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Outfit:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="scene"></canvas>
+
+    <!-- Scanning Overlay Lines -->
+    <div class="cyber-scanlines"></div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Top HUD Navigation & Status Header                                  -->
+    <!-- ------------------------------------------------------------------ -->
+    <header id="topHudHeader" class="hud-layer">
+      <!-- Left: Brand & Mode Indicator -->
+      <div class="brand-cluster">
+        <div class="brand-badge">
+          <span class="pulse-dot"></span>
+          <span>NEON 2099</span>
+        </div>
+        <div class="mission-mode-tag" id="currentModeTag">CIRCUIT RUN</div>
+      </div>
+
+      <!-- Center: Mission Objective & Timer Bar -->
+      <div id="missionTrackerBar" class="glass-panel">
+        <div class="tracker-item">
+          <span class="tracker-label" id="objectiveLabel">TARGET RING</span>
+          <span class="tracker-value" id="objectiveVal">01 / 20</span>
+        </div>
+        <div class="tracker-divider"></div>
+        <div class="tracker-item timer-item">
+          <span class="tracker-label">TIME REMAINING</span>
+          <span class="tracker-value" id="timerVal">00:45.0</span>
+        </div>
+        <div class="tracker-divider"></div>
+        <div class="tracker-item">
+          <span class="tracker-label">DISTANCE</span>
+          <span class="tracker-value cyan-glow" id="distanceVal">25 M</span>
+        </div>
+      </div>
+
+      <!-- Right: Score, Streak & Utilities -->
+      <div class="right-hud-cluster">
+        <div class="score-streak-panel glass-panel">
+          <div class="score-display">
+            <span class="score-label">SCORE</span>
+            <span class="score-number" id="scoreVal">0</span>
+          </div>
+          <div class="streak-badge" id="streakBadge">
+            <span id="streakText">x1</span>
+          </div>
+        </div>
+
+        <div class="hud-controls-group">
+          <!-- Audio Toggle -->
+          <button id="audioBtn" class="cyber-icon-btn" title="Toggle Synthwave Audio (M)">
+            <span id="audioIcon">🔊</span>
+          </button>
+          <!-- Pause Button -->
+          <button id="pauseBtn" class="cyber-icon-btn" title="Pause Game (ESC / P)">
+            <span>⏸️</span>
+          </button>
+          <!-- Camera Presets Dropdown/Toggle -->
+          <div class="camera-toggle-group">
+            <button class="preset-cam-btn active" data-cam="chase" title="Chase Cam (Default)">🎥</button>
+            <button class="preset-cam-btn" data-cam="cockpit" title="Cockpit View">🏎️</button>
+            <button class="preset-cam-btn" data-cam="skyline" title="Skyline View">🌆</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Flight Reticle, Horizon & Waypoint Nav Overlay                     -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="flightReticleOverlay" class="hud-layer pointer-events-none">
+      <div class="reticle-crosshair">
+        <div class="crosshair-h"></div>
+        <div class="crosshair-v"></div>
+        <div class="reticle-ring"></div>
+      </div>
+
+      <!-- 3D Projected Target Bracket -->
+      <div id="targetBracket" class="target-bracket">
+        <div class="bracket-corner top-left"></div>
+        <div class="bracket-corner top-right"></div>
+        <div class="bracket-corner bottom-left"></div>
+        <div class="bracket-corner bottom-right"></div>
+        <div class="bracket-label" id="bracketDist">25m</div>
+      </div>
+
+      <!-- Off-Screen Target Indicator Arrow -->
+      <div id="offscreenPointer" class="offscreen-pointer">
+        <div class="pointer-arrow">▲</div>
+        <div class="pointer-label" id="offscreenDist">25m</div>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Dynamic HUD Warning Banners                                        -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="hudAlertBanner" class="hud-layer pointer-events-none hidden">
+      <div class="alert-box" id="alertBox">
+        <span class="alert-icon">⚠️</span>
+        <span class="alert-text" id="alertText">WARNING: PERIMETER FORCEFIELD</span>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Bottom Left Speedometer & Hull Telemetry                           -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="telemetryPanel" class="glass-panel hud-layer">
+      <!-- Speedometer -->
+      <div class="speed-row">
+        <span class="speed-digits" id="speedText">000</span>
+        <span class="speed-unit">KM/H</span>
+      </div>
+      <div class="alt-row" id="altText">ALT: 14 M</div>
+
+      <!-- Shield / Hull Integrity Bar -->
+      <div class="gauge-group">
+        <div class="gauge-header">
+          <span>HULL SHIELD</span>
+          <span id="shieldPctText">100%</span>
+        </div>
+        <div class="gauge-bar-container shield-container">
+          <div class="gauge-bar-fill shield-fill" id="shieldFill"></div>
+        </div>
+      </div>
+
+      <!-- Nitro Warp Energy Bar -->
+      <div class="gauge-group">
+        <div class="gauge-header">
+          <span>NITRO WARP</span>
+          <button id="nitroQuickBtn" class="nitro-chip-btn">[N] BOOST</button>
+        </div>
+        <div class="gauge-bar-container nitro-container">
+          <div class="gauge-bar-fill nitro-fill" id="nitroFill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Bottom Right Controls Cheat Sheet                                  -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="controlsGuide" class="glass-panel hud-layer">
+      <div class="guide-row">
+        <span>Steer:</span>
+        <kbd>A</kbd><kbd>D</kbd> or <kbd>←</kbd><kbd>→</kbd> / Drag Mouse
+      </div>
+      <div class="guide-row">
+        <span>Speed:</span>
+        <kbd>W</kbd> Accelerate / <kbd>S</kbd> Brake
+      </div>
+      <div class="guide-row">
+        <span>Altitude:</span>
+        <kbd>Space</kbd> / <kbd>Shift</kbd>
+      </div>
+      <div class="guide-row">
+        <span>Nitro:</span>
+        <kbd>N</kbd>
+      </div>
+      <div class="guide-row assist-hint">
+        <span>🧲 Ring Magnet & Auto-Cruise Active</span>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Mobile Touch Controls (shown on touch devices)                     -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="mobileControls" class="hud-layer hidden">
+      <div class="touch-cluster-left">
+        <button class="touch-btn" id="touchUp">⬆️</button>
+        <div class="touch-row">
+          <button class="touch-btn" id="touchLeft">⬅️</button>
+          <button class="touch-btn" id="touchRight">➡️</button>
+        </div>
+        <button class="touch-btn" id="touchDown">⬇️</button>
+      </div>
+      <div class="touch-cluster-right">
+        <button class="touch-action-btn boost-btn" id="touchNitro">⚡ NITRO</button>
+        <div class="touch-alt-row">
+          <button class="touch-action-btn" id="touchAscend">▲ UP</button>
+          <button class="touch-action-btn" id="touchDescend">▼ DOWN</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Countdown Overlay                                                  -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="countdownOverlay" class="modal-layer hidden">
+      <div class="countdown-number" id="countdownNumber">3</div>
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Main Menu / Mission Select Modal                                   -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="mainMenuModal" class="modal-layer">
+      <div class="menu-card glass-panel">
+        <div class="menu-header">
+          <div class="menu-brand-badge">CYBERPUNK 2099</div>
+          <h1 class="menu-title">SKYLINE OVERDRIVE</h1>
+          <p class="menu-subtitle">High-Velocity Acrobatic WebXR Flight Arcade</p>
+        </div>
+
+        <div class="mode-selection-grid">
+          <!-- Mode 1: Circuit Run -->
+          <div class="mode-card active" data-mode="circuit">
+            <div class="mode-icon">⚡</div>
+            <div class="mode-info">
+              <div class="mode-title">CYBER CIRCUIT</div>
+              <div class="mode-desc">Slalom through 20 holographic neon rings, dive under sky bridges, and beat the clock.</div>
+              <div class="mode-meta">
+                <span class="badge diff-normal">TIME ATTACK</span>
+                <span class="high-score-tag" id="circuitHighScore">BEST: 0 PTS</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mode 2: Data Hunt -->
+          <div class="mode-card" data-mode="data_hunt">
+            <div class="mode-icon">💎</div>
+            <div class="mode-info">
+              <div class="mode-title">DATA CORE HUNT</div>
+              <div class="mode-desc">Infiltrate the metropolis to retrieve 15 encrypted data crystals while dodging security drones.</div>
+              <div class="mode-meta">
+                <span class="badge diff-hard">SURVIVAL</span>
+                <span class="high-score-tag" id="dataHuntHighScore">BEST: 0 PTS</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mode 3: Free Roam -->
+          <div class="mode-card" data-mode="free_roam">
+            <div class="mode-icon">🌆</div>
+            <div class="mode-info">
+              <div class="mode-title">FREE CRUISE</div>
+              <div class="mode-desc">Cruise the neon skyline with unlimited boost and synthwave tracks without timers or damage.</div>
+              <div class="mode-meta">
+                <span class="badge diff-zen">ZEN EXPLORATION</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="menu-actions">
+          <button id="startMissionBtn" class="cyber-btn primary-btn">
+            <span>🚀 LAUNCH FLIGHT</span>
+          </button>
+          <div id="vrButtonContainer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Pause Menu Modal                                                   -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="pauseModal" class="modal-layer hidden">
+      <div class="pause-card glass-panel">
+        <h2 class="pause-title">MISSION PAUSED</h2>
+        <div class="pause-actions">
+          <button id="resumeBtn" class="cyber-btn primary-btn">RESUME FLIGHT</button>
+          <button id="restartMissionBtn" class="cyber-btn">RESTART MISSION</button>
+          <button id="quitToMenuBtn" class="cyber-btn danger-btn">ABORT TO MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Game Over / Mission Failed Modal                                   -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="gameOverModal" class="modal-layer hidden">
+      <div class="result-card glass-panel failed-card">
+        <div class="result-badge failed-badge">MISSION FAILED</div>
+        <h2 class="result-title" id="gameOverReason">HULL DESTROYED</h2>
+
+        <div class="stats-summary-grid">
+          <div class="stat-box">
+            <span class="stat-lbl">FINAL SCORE</span>
+            <span class="stat-num" id="failScore">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-lbl">PROGRESS</span>
+            <span class="stat-num" id="failProgress">0 / 20</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-lbl">TOP SPEED</span>
+            <span class="stat-num" id="failTopSpeed">0 KM/H</span>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button id="retryMissionBtn" class="cyber-btn primary-btn">⚡ RETRY MISSION</button>
+          <button id="failMenuBtn" class="cyber-btn">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Victory / Mission Complete Modal                                   -->
+    <!-- ------------------------------------------------------------------ -->
+    <div id="victoryModal" class="modal-layer hidden">
+      <div class="result-card glass-panel victory-card">
+        <div class="result-badge victory-badge">MISSION ACCOMPLISHED</div>
+        <h2 class="result-title">NEON SKYLINE CLEARED!</h2>
+
+        <div class="rank-container">
+          <div class="rank-badge" id="victoryRank">S RANK</div>
+          <div class="record-tag hidden" id="newRecordTag">✨ NEW HIGH SCORE RECORD!</div>
+        </div>
+
+        <div class="stats-summary-grid">
+          <div class="stat-box">
+            <span class="stat-lbl">TOTAL SCORE</span>
+            <span class="stat-num cyan-glow" id="victoryScore">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-lbl">TIME REMAINING</span>
+            <span class="stat-num" id="victoryTime">00:00.0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-lbl">MAX COMBO</span>
+            <span class="stat-num" id="victoryCombo">x4</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-lbl">SHIELD INTEGRITY</span>
+            <span class="stat-num" id="victoryShield">100%</span>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button id="playAgainBtn" class="cyber-btn primary-btn">🚀 PLAY AGAIN</button>
+          <button id="victoryMenuBtn" class="cyber-btn">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
